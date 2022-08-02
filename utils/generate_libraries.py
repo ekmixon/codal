@@ -29,9 +29,8 @@ def copytree(src, dst, symlinks=False, ignore=None):
         d = os.path.join(dst, item)
         if os.path.isdir(s):
             copytree(s, d, symlinks, ignore)
-        else:
-            if not os.path.exists(d) or os.stat(s).st_mtime - os.stat(d).st_mtime > 1:
-                shutil.copy2(s, d)
+        elif not os.path.exists(d) or os.stat(s).st_mtime - os.stat(d).st_mtime > 1:
+            shutil.copy2(s, d)
 
 def path_leaf(path):
     head, tail = ntpath.split(path)

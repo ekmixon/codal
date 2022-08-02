@@ -49,17 +49,17 @@ def checkgit():
 def read_config():
     codal = read_json("codal.json")
     targetdir = codal['target']['name']
-    target = read_json("libraries/" + targetdir + "/target.json")
+    target = read_json(f"libraries/{targetdir}/target.json")
     return (codal, targetdir, target)
 
 def update():
     (codal, targetdir, target) = read_config()
     dirname = os.getcwd()
     for ln in target['libraries']:
-        os.chdir(dirname + "/libraries/" + ln['name'])
+        os.chdir(f"{dirname}/libraries/" + ln['name'])
         system("git checkout " + ln['branch'])
         system("git pull")
-    os.chdir(dirname + "/libraries/" + targetdir)
+    os.chdir(f"{dirname}/libraries/{targetdir}")
     if "HEAD detached" in os.popen('git branch').read().strip():
         system("git checkout master")
     system("git pull")
@@ -73,9 +73,9 @@ def status():
     (codal, targetdir, target) = read_config()
     dirname = os.getcwd()
     for ln in target['libraries']:
-        os.chdir(dirname + "/libraries/" + ln['name'])
+        os.chdir(f"{dirname}/libraries/" + ln['name'])
         printstatus()
-    os.chdir(dirname + "/libraries/" + targetdir)
+    os.chdir(f"{dirname}/libraries/{targetdir}")
     printstatus()
     os.chdir(dirname)
     printstatus()
@@ -88,9 +88,9 @@ def get_next_version(options):
     if m is None:
         print("Cannot determine next version from git log")
         exit(1)
-    v0 = int(m.group(1))
-    v1 = int(m.group(2))
-    v2 = int(m.group(3))
+    v0 = int(m[1])
+    v1 = int(m[2])
+    v2 = int(m[3])
     vB = -1
     branchName = os.popen('git rev-parse --abbrev-ref HEAD').read().strip()
     if not options.branch and branchName not in ["master","main"]:
@@ -98,8 +98,8 @@ def get_next_version(options):
         exit(1)
     suff = ""
     if options.branch:
-        if m.group(4) and branchName == m.group(5):
-            vB = int(m.group(6))
+        if m[4] and branchName == m[5]:
+            vB = int(m[6])
         suff = "-%s.%d" % (branchName, vB + 1)
     elif options.update_major:
         v0 += 1
@@ -116,7 +116,7 @@ def lock(options):
     (codal, targetdir, target) = read_config()
     dirname = os.getcwd()
     for ln in target['libraries']:
-        os.chdir(dirname + "/libraries/" + ln['name'])
+        os.chdir(f"{dirname}/libraries/" + ln['name'])
         checkgit()
         stat = os.popen('git status --porcelain -b').read().strip()
         if "ahead" in stat:
@@ -125,7 +125,7 @@ def lock(options):
         sha = os.popen('git rev-parse HEAD').read().strip()
         ln['branch'] = sha
         print(ln['name'], sha)
-    os.chdir(dirname + "/libraries/" + targetdir)
+    os.chdir(f"{dirname}/libraries/{targetdir}")
     ver = get_next_version(options)
     print("Creating snaphot", ver)
     system("git checkout target-locked.json")
@@ -135,7 +135,7 @@ def lock(options):
         f.write(json.dumps(target, indent=4, sort_keys=True))
     system("git commit -am \"Snapshot %s\"" % ver)  # must match get_next_version() regex
     sha = os.popen('git rev-parse HEAD').read().strip()
-    system("git tag %s" % ver)
+    system(f"git tag {ver}")
     system("git pull")
     system("git push")
     system("git push --tags")
@@ -161,7 +161,7 @@ def generate_docs():
     os.chdir("..")
     (codal, targetdir, target) = read_config()
 
-    lib_dir = os.getcwd() + "/libraries/"
+    lib_dir = f"{os.getcwd()}/libraries/"
 
     libraries = [lib_dir + targetdir]
 

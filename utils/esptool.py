@@ -104,7 +104,7 @@ class ESPROM(object):
         # same operation as the request or a retries limit has
         # exceeded. This is needed for some esp8266s that
         # reply with more sync responses than expected.
-        for retry in xrange(100):
+        for _ in xrange(100):
             p = self.read()
             if len(p) < 8:
                 continue
@@ -120,7 +120,7 @@ class ESPROM(object):
     """ Perform a connection test """
     def sync(self):
         self.command(ESPROM.ESP_SYNC, '\x07\x07\x12\x20' + 32 * '\x55')
-        for i in xrange(7):
+        for _ in xrange(7):
             self.command()
 
     """ Try connecting repeatedly until successful, or giving up """
@@ -260,8 +260,7 @@ class ESPROM(object):
         self.flash_begin(0, 0)
         self.write_reg(0x60000240, 0x0, 0xffffffff)
         self.write_reg(0x60000200, 0x10000000, 0xffffffff)
-        flash_id = self.read_reg(0x60000240)
-        return flash_id
+        return self.read_reg(0x60000240)
 
     """ Abuse the loader protocol to force flash to be left in write mode """
     def flash_unlock_dio(self):
@@ -361,9 +360,10 @@ class BaseFirmwareImage(object):
     def load_segment(self, f, is_irom_segment=False):
         """ Load the next segment from the image file """
         (offset, size) = struct.unpack('<II', f.read(8))
-        if not is_irom_segment:
-            if offset > 0x40200000 or offset < 0x3ffe0000 or size > 65536:
-                raise FatalError('Suspicious segment 0x%x, length %d' % (offset, size))
+        if not is_irom_segment and (
+            offset > 0x40200000 or offset < 0x3FFE0000 or size > 65536
+        ):
+            raise FatalError('Suspicious segment 0x%x, length %d' % (offset, size))
         segment_data = f.read(size)
         if len(segment_data) < size:
             raise FatalError('End of file reading segment 0x%x, length %d (actual length %d)' % (offset, size, len(segment_data)))
@@ -411,7 +411,7 @@ class ESPFirmwareImage(BaseFirmwareImage):
             if magic != ESPROM.ESP_IMAGE_MAGIC or segments > 16:
                 raise FatalError('Invalid firmware image magic=%d segments=%d' % (magic, segments))
 
-            for i in xrange(segments):
+            for _ in xrange(segments):
                 self.load_segment(load_file)
             self.checksum = self.read_checksum(load_file)
 
@@ -586,7 +586,7 @@ class CesantaFlasher(object):
                 status_code = struct.unpack('<B', p)[0]
                 raise FatalError('Write failure, status: %x' % status_code)
             else:
-                raise FatalError('Unexpected packet while writing: %s' % hexify(p))
+                raise FatalError(f'Unexpected packet while writing: {hexify(p)}')
             if show_progress:
                 progress = '%d (%d %%)' % (num_written, num_written * 100.0 / len(data))
                 sys.stdout.write(progress + '\b' * len(progress))
@@ -596,15 +596,15 @@ class CesantaFlasher(object):
                 num_sent += 1024
         p = self._esp.read()
         if len(p) != 16:
-            raise FatalError('Expected digest, got: %s' % hexify(p))
+            raise FatalError(f'Expected digest, got: {hexify(p)}')
         digest = hexify(p).upper()
         expected_digest = hashlib.md5(data).hexdigest().upper()
         print
         if digest != expected_digest:
-            raise FatalError('Digest mismatch: expected %s, got %s' % (expected_digest, digest))
+            raise FatalError(f'Digest mismatch: expected {expected_digest}, got {digest}')
         p = self._esp.read()
         if len(p) != 1:
-            raise FatalError('Expected status, got: %s' % hexify(p))
+            raise FatalError(f'Expected status, got: {hexify(p)}')
         status_code = struct.unpack('<B', p)[0]
         if status_code != 0:
             raise FatalError('Write failure, status: %x' % status_code)
@@ -635,15 +635,15 @@ class CesantaFlasher(object):
                 raise FatalError('Read more than expected')
         p = self._esp.read()
         if len(p) != 16:
-            raise FatalError('Expected digest, got: %s' % hexify(p))
+            raise FatalError(f'Expected digest, got: {hexify(p)}')
         expected_digest = hexify(p).upper()
         digest = hashlib.md5(data).hexdigest().upper()
         print
         if digest != expected_digest:
-            raise FatalError('Digest mismatch: expected %s, got %s' % (expected_digest, digest))
+            raise FatalError(f'Digest mismatch: expected {expected_digest}, got {digest}')
         p = self._esp.read()
         if len(p) != 1:
-            raise FatalError('Expected status, got: %s' % hexify(p))
+            raise FatalError(f'Expected status, got: {hexify(p)}')
         status_code = struct.unpack('<B', p)[0]
         if status_code != 0:
             raise FatalError('Write failure, status: %x' % status_code)
@@ -663,14 +663,14 @@ class CesantaFlasher(object):
                     raise FatalError('Write failure, status: %x' % status_code)
                 break
             else:
-                raise FatalError('Unexpected packet: %s' % hexify(p))
+                raise FatalError(f'Unexpected packet: {hexify(p)}')
         return digests[-1], digests[:-1]
 
     def boot_fw(self):
         self._esp.write(struct.pack('<B', self.CMD_BOOT_FW))
         p = self._esp.read()
         if len(p) != 1:
-            raise FatalError('Expected status, got: %s' % hexify(p))
+            raise FatalError(f'Expected status, got: {hexify(p)}')
         status_code = struct.unpack('<B', p)[0]
         if status_code != 0:
             raise FatalError('Boot failure, status: %x' % status_code)
@@ -682,7 +682,7 @@ class CesantaFlasher(object):
         p = self._esp.read()
         self._esp._port.timeout = otimeout
         if len(p) != 1:
-            raise FatalError('Expected status, got: %s' % hexify(p))
+            raise FatalError(f'Expected status, got: {hexify(p)}')
         status_code = struct.unpack('<B', p)[0]
         if status_code != 0:
             raise FatalError('Erase chip failure, status: %x' % status_code)
@@ -701,7 +701,10 @@ def slip_reader(port):
         waiting = port.inWaiting()
         read_bytes = port.read(1 if waiting == 0 else waiting)
         if read_bytes == '':
-            raise FatalError("Timed out waiting for packet %s" % ("header" if partial_packet is None else "content"))
+            raise FatalError(
+                f'Timed out waiting for packet {"header" if partial_packet is None else "content"}'
+            )
+
 
         for b in read_bytes:
             if partial_packet is None:  # waiting for packet header
@@ -765,10 +768,9 @@ def hexify(s):
 
 
 def unhexify(hs):
-    s = ''
-    for i in range(0, len(hs) - 1, 2):
-        s += chr(int(hs[i] + hs[i + 1], 16))
-    return s
+    return ''.join(
+        chr(int(hs[i] + hs[i + 1], 16)) for i in range(0, len(hs) - 1, 2)
+    )
 
 
 class FatalError(RuntimeError):
@@ -1035,7 +1037,11 @@ def version(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='esptool.py v%s - ESP8266 ROM Bootloader Utility' % __version__, prog='esptool')
+    parser = argparse.ArgumentParser(
+        description=f'esptool.py v{__version__} - ESP8266 ROM Bootloader Utility',
+        prog='esptool',
+    )
+
 
     parser.add_argument(
         '--port', '-p',
@@ -1164,11 +1170,11 @@ def main():
 
     # internal sanity check - every operation matches a module function of the same name
     for operation in subparsers.choices.keys():
-        assert operation in globals(), "%s should be a module function" % operation
+        assert operation in globals(), f"{operation} should be a module function"
 
     args = parser.parse_args()
 
-    print 'esptool.py v%s' % __version__
+    parser = argparse.ArgumentParser(description='esptool.py v%s - ESP8266 ROM Bootloader Utility' % __version__, prog='esptool')
 
     # operation function can take 1 arg (args), 2 args (esp, arg)
     # or be a member function of the ESPROM class.

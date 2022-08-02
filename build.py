@@ -75,9 +75,9 @@ if len(args) == 1:
     # list all targets
     if target_name == "ls":
         for json_obj in test_json:
-            s = "%s: %s" % (json_obj["name"], json_obj["info"])
+            s = f'{json_obj["name"]}: {json_obj["info"]}'
             if "device_url" in json_obj.keys():
-                s += "(%s)" % json_obj["device_url"]
+                s += f'({json_obj["device_url"]})'
             print(s)
         exit(0)
 
@@ -92,7 +92,7 @@ if len(args) == 1:
         target_config = json_obj
         break
 
-    if target_config == None and target_name.startswith("http"):
+    if target_config is None and target_name.startswith("http"):
         target_config = {
             "name": re.sub("^.*/", "", target_name),
             "url": target_name,
@@ -100,7 +100,7 @@ if len(args) == 1:
             "type": "git"
         }
 
-    if target_config == None:
+    if target_config is None:
         print("'" + target_name + "'" + " is not a valid target.")
         exit(1)
 

@@ -35,7 +35,7 @@ def main():
         exit(1)
 
     current_dir = os.getcwd()
-    build_folder = args.path + "/build"
+    build_folder = f"{args.path}/build"
     print(current_dir)
 
     if not os.path.exists(build_folder):
@@ -61,7 +61,7 @@ def main():
             iter_files = [f for f in files if f in built_files]
 
         for f in iter_files:
-            copy_file_and_owner(build_folder + "/" + f, out_path + "/" + f)
+            copy_file_and_owner(f"{build_folder}/{f}", f"{out_path}/{f}")
 
 if __name__ == "__main__":
     main()

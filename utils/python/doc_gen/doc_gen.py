@@ -63,13 +63,11 @@ def generate_mkdocs(header_paths, type_colour = "#a71d5d", function_name_colour 
                     for member_function in meta_data["filter"]:
                         local_filter = local_filter + [ str(member_function) ]
 
-                    print "Custom filter applied: " + str(member_func_filter)
-
                 class_xml_files = list(utils.find_files("./xml","*class*"+meta_data['className'] + ".xml"))
 
-                print class_xml_files
+                meta_data = json.loads(result[0])
 
-                if len(class_xml_files) == 0:
+                if not class_xml_files:
                     raise Exception("Invalid classname: " + meta_data['className'])
                 elif len(class_xml_files) > 1:
                     class_xml_files
